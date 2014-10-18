@@ -1,0 +1,134 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    keep_md: true
+---
+
+
+## Loading and preprocessing the data
+```{r echo = TRUE}
+dat <- read.csv("./activity.csv")
+```
+
+To ignore the missing values in the dataset
+
+```{r echo = TRUE}
+noNA<-dat[complete.cases(dat),]
+```
+
+## What is mean total number of steps taken per day?
+A histogram of the total number of steps taken each day. 
+
+The function tapply() is used to  calculate the total number of steps the first day, the second day,...
+```{r echo = TRUE}
+stepsperDay<-tapply(noNA$steps, as.Date(noNA$date), sum)
+hist(stepsperDay)
+```
+
+
+Now we calculate the mean and median total number of steps taken per day
+
+tapply() is used again to calculate the mean of the first day, the second,....
+
+```{r echo = TRUE}
+meanperDay<-tapply(noNA$steps, as.Date(noNA$date), mean)
+head(meanperDay)
+```
+
+The median is calculated in the same way
+
+```{r echo = TRUE}
+medianperDay<-tapply(noNA$steps, as.Date(noNA$date), median)
+head(medianperDay)
+```
+
+
+## What is the average daily activity pattern?
+Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+```{r echo = TRUE}
+plot(tapply(noNA$steps, noNA$interval, mean), type="l", xlab="5-minute interval", ylab="average steps", main="Average daily activity", col ="darkgreen")
+
+```
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r echo = TRUE}
+max(tapply(noNA$steps, noNA$interval, mean))
+
+```
+## Imputing missing values
+
+
+    Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+    
+```{r echo = TRUE}
+nrow(dat)-nrow(noNA)
+```
+
+    Devise a strategy for filling in all of the missing values in the dataset. 
+    I have decided to fill in with the mean of all the means
+    
+
+    Create a new dataset that is equal to the original dataset but with the missing data filled in.
+        
+```{r echo = TRUE}
+strategy <- dat
+strategy$steps[is.na(strategy$steps)]=mean(meanperDay)
+strategy$date=as.Date(strategy$date)
+```
+
+    Make a histogram of the total number of steps taken each day and calculate and report the mean and median total number of steps taken per day. 
+
+
+```{r echo = TRUE}
+stepsperDayStr<-tapply(strategy$steps, strategy$date, sum)
+hist(stepsperDayStr, xlab="Steps per day (strategy mentioned)", main="Histogram of Steps per day (all values determined)", col="purple")
+meanperDayStr<-tapply(strategy$steps, strategy$date, mean)
+head(meanperDayStr)
+medianperDayStr<-tapply(strategy$steps, strategy$date, median)
+head(medianperDayStr)
+```
+Do these values differ from the estimates from the first part of the assignment? 
+
+```{r echo = TRUE}
+plot(meanperDay,col="green", type="l",ylab="mean", xlab="days")
+par(new=TRUE)
+plot(meanperDayStr,col="purple", type="l", xlab="",ylab="")
+title(main="Mean per Day before and after the used strategy")
+legend("topleft", legend=c("raw data", "after strategy"), text.col = c("green", "purple"))
+```
+
+
+What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```{r echo = TRUE}
+h1 <- hist(stepsperDay, plot=FALSE)
+h2 <- hist(stepsperDayStr, plot=FALSE)
+plot(h1,col="green", ylim=c(0,35),density=10,angle=135,xlab="",ylab="",main="")
+par(new=TRUE)
+plot(h2, col="purple", ylim=c(0,35),density=10,angle=45,xlab="steps per day",ylab="Frequency",main="")
+title(main="Total daily number of steps")
+legend("topright", legend=c("raw data", "after strategy"), text.col = c("green", "purple"))
+
+
+```
+
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+Create a new factor variable in the dataset with two levels -- "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+```{r echo = TRUE}
+weekends <- strategy[weekdays(strategy$date) =="Sunday"|weekdays(strategy$date) =="Saturday",]
+weekdays <- strategy[!(weekdays(strategy$date) =="Sunday"|weekdays(strategy$date) =="Saturday"),]
+```
+
+    Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). 
+```{r echo=TRUE}
+    meanWeekends <-tapply(weekends$steps, weekends$date, mean)
+    meanWeekdays <-tapply(weekdays$steps, weekdays$date, mean)
+library(ggplot2)
+
+qday <- qplot(1: length(meanWeekdays), meanWeekdays, geom="line")+labs(title="Weekdays")+labs(x="interval", y="number of steps")
+
+ qend <- qplot(1: length(meanWeekends), meanWeekends,  geom="line")+labs(title="Weekends")+labs(x="interval", y="number of steps")
+print(qday);print(qend)
